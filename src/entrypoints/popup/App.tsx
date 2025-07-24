@@ -92,7 +92,7 @@ export const App: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div style={{ width: '300px', padding: '20px', textAlign: 'center' }}>
+      <div className="w-[300px] p-5 text-center">
         <div>Loading...</div>
       </div>
     );
@@ -100,21 +100,13 @@ export const App: React.FC = () => {
 
   if (session && user) {
     return (
-      <div style={{ width: '300px', padding: '20px' }}>
+      <div className="w-[300px] p-5">
         <h2>Welcome!</h2>
         <p>Email: {user.email}</p>
         <p>ID: {user.id}</p>
         <button
           onClick={handleSignOut}
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#dc2626',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
+          className="w-full cursor-pointer rounded border-none bg-red-600 p-2.5 text-white"
         >
           Sign Out
         </button>
@@ -123,11 +115,11 @@ export const App: React.FC = () => {
   }
 
   return (
-    <div style={{ width: '300px', padding: '20px' }}>
+    <div className="w-[300px] p-5">
       <h2>Sign In</h2>
       <form
         onSubmit={handleSignIn}
-        style={{ marginBottom: '10px' }}
+        className="mb-2.5"
       >
         <input
           type="email"
@@ -135,14 +127,7 @@ export const App: React.FC = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
-          style={{
-            width: '100%',
-            padding: '8px',
-            marginBottom: '10px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxSizing: 'border-box',
-          }}
+          className="mb-2.5 box-border w-full rounded border border-gray-300 p-2"
         />
         <input
           type="password"
@@ -150,28 +135,12 @@ export const App: React.FC = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          style={{
-            width: '100%',
-            padding: '8px',
-            marginBottom: '10px',
-            border: '1px solid #ccc',
-            borderRadius: '4px',
-            boxSizing: 'border-box',
-          }}
+          className="mb-2.5 box-border w-full rounded border border-gray-300 p-2"
         />
         <button
           type="submit"
           disabled={isLoading}
-          style={{
-            width: '100%',
-            padding: '10px',
-            backgroundColor: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            marginBottom: '10px',
-          }}
+          className="mb-2.5 w-full cursor-pointer rounded border-none bg-blue-600 p-2.5 text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           Sign In
         </button>
@@ -180,16 +149,7 @@ export const App: React.FC = () => {
       <button
         onClick={handleSignUp}
         disabled={isLoading}
-        style={{
-          width: '100%',
-          padding: '10px',
-          backgroundColor: '#16a34a',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginBottom: '10px',
-        }}
+        className="mb-2.5 w-full cursor-pointer rounded border-none bg-green-600 p-2.5 text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         Sign Up
       </button>
@@ -197,15 +157,7 @@ export const App: React.FC = () => {
       <button
         onClick={handleSignInWithGoogle}
         disabled={isLoading}
-        style={{
-          width: '100%',
-          padding: '10px',
-          backgroundColor: '#dc2626',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
+        className="w-full cursor-pointer rounded border-none bg-red-600 p-2.5 text-white disabled:cursor-not-allowed disabled:opacity-50"
       >
         Sign in with Google
       </button>
