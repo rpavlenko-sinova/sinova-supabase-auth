@@ -1,171 +1,214 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { type Session, type User } from '@supabase/supabase-js';
 
-import reactLogo from '@/assets/react.svg';
-import wxtLogo from '/wxt.svg';
-import '@/entrypoints/popup/App.css';
-import { Button } from '@/components/ui/button';
-import { BridgeMessage } from '@/lib/enums/bridge';
-import { sendMessage } from '@/entrypoints/background/messaging/messaging';
+export const App: React.FC = () => {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-export const App = () => {
-  const [count, setCount] = useState(0);
-  const [messageStatus, setMessageStatus] = useState<string>('');
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
 
-  const sendMessageToBackground = async () => {
-    try {
-      const response = await sendMessage(BridgeMessage.PopupMessage, {
-        message: `Hello from popup! Count is ${count}`,
-        timestamp: Date.now(),
-      });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setIsLoading(false);
+    });
 
-      if (response && typeof response === 'object' && 'message' in response) {
-        setMessageStatus(
-          `Message sent successfully: ${response.message && typeof response.message === 'string' ? response.message : `response value is not defined or an object ${JSON.stringify(response)}`}`,
-        );
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignUp = async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    setIsLoading(true);
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: browser.runtime.getURL('/auth-callback.html'),
+      },
+    });
+
+    if (error) {
+      console.error(error.message);
+    } else {
+      if (data.user && data.session) {
+        console.info('Account created successfully!');
       } else {
-        setMessageStatus('Message sent successfully');
+        console.info('Check your email for verification link! You need to verify your email before signing in.');
       }
-      console.info('Response from background:', response);
-    } catch (error) {
-      setMessageStatus(
-        `Error sending message: ${error && typeof error === 'string' ? error : `error value is not defined or an object ${JSON.stringify(error)}`}`,
-      );
-      console.error('Error sending message:', error);
+    }
+    setIsLoading(false);
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error(error.message);
+    }
+    setIsLoading(false);
+  };
+
+  const handleSignInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: browser.runtime.getURL('/auth-callback.html'),
+      },
+    });
+
+    if (error) {
+      console.error('Google sign in error:', error);
+    } else {
+      browser.tabs.create({ url: data.url });
     }
   };
 
-  const sendActionToBackground = async (action: string) => {
-    try {
-      const response = await sendMessage(BridgeMessage.PopupAction, {
-        action,
-        timestamp: Date.now(),
-      });
-
-      if (response && typeof response === 'object' && 'action' in response) {
-        setMessageStatus(
-          `Action sent successfully: ${response.action && typeof response.action === 'string' ? response.action : `response value is not defined or an object ${JSON.stringify(response)}`}`,
-        );
-      } else {
-        setMessageStatus('Action sent successfully');
-      }
-      console.info('Response from background:', response);
-    } catch (error) {
-      setMessageStatus(
-        `Error sending action: ${error && typeof error === 'string' ? error : `error value is not defined or an object ${JSON.stringify(error)}`}`,
-      );
-      console.error('Error sending action:', error);
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error(error.message);
     }
   };
 
-  const getStorageValue = async () => {
-    try {
-      const response = await sendMessage(BridgeMessage.StorageGet, {
-        key: BridgeMessage.StorageGet,
-      });
-      console.info('Response from background:', response);
-    } catch (error) {
-      console.error('Error sending action:', error);
-    }
-  };
-
-  const setStorageValue = async (value: string) => {
-    try {
-      const response = await sendMessage(BridgeMessage.StorageSet, {
-        key: BridgeMessage.StorageSet,
-        value,
-      });
-      console.info('Response from background:', response);
-    } catch (error) {
-      console.error('Error sending action:', error);
-    }
-  };
-
-  return (
-    <>
-      <div>
-        <a
-          href="https://wxt.dev"
-          target="_blank"
-        >
-          <img
-            src={wxtLogo}
-            className="logo"
-            alt="WXT logo"
-          />
-        </a>
-        <a
-          href="https://react.dev"
-          target="_blank"
-        >
-          <img
-            src={reactLogo}
-            className="logo react"
-            alt="React logo"
-          />
-        </a>
+  if (isLoading) {
+    return (
+      <div style={{ width: '300px', padding: '20px', textAlign: 'center' }}>
+        <div>Loading...</div>
       </div>
-      <h1>WXT + React</h1>
-      <div className="card">
-        <Button onClick={() => setCount((count) => count + 1)}>count is {count}</Button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR 12345
-        </p>
+    );
+  }
 
-        <div
+  if (session && user) {
+    return (
+      <div style={{ width: '300px', padding: '20px' }}>
+        <h2>Welcome!</h2>
+        <p>Email: {user.email}</p>
+        <p>ID: {user.id}</p>
+        <button
+          onClick={handleSignOut}
           style={{
-            marginTop: '20px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
+            width: '100%',
+            padding: '10px',
+            backgroundColor: '#dc2626',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
           }}
         >
-          <Button
-            onClick={sendMessageToBackground}
-            style={{ padding: '8px 16px' }}
-          >
-            Send Message to Background
-          </Button>
-          <Button
-            onClick={() => sendActionToBackground('increment')}
-            style={{ padding: '8px 16px' }}
-          >
-            Send Increment Action
-          </Button>
-          <Button
-            onClick={() => sendActionToBackground('reset')}
-            style={{ padding: '8px 16px' }}
-          >
-            Send Reset Action
-          </Button>
-          <Button
-            onClick={() => getStorageValue()}
-            style={{ padding: '8px 16px' }}
-          >
-            Get Storage Value
-          </Button>
-          <Button
-            onClick={() => setStorageValue('test')}
-            style={{ padding: '8px 16px' }}
-          >
-            Set Storage Value
-          </Button>
-        </div>
-
-        {!!messageStatus && (
-          <div
-            style={{
-              marginTop: '10px',
-              padding: '8px',
-              backgroundColor: messageStatus.includes('Error') ? '#ffebee' : '#e8f5e8',
-              borderRadius: '4px',
-              fontSize: '12px',
-            }}
-          >
-            {messageStatus}
-          </div>
-        )}
+          Sign Out
+        </button>
       </div>
-      <p className="read-the-docs">Click on the WXT and React logos to learn more</p>
-    </>
+    );
+  }
+
+  return (
+    <div style={{ width: '300px', padding: '20px' }}>
+      <h2>Sign In</h2>
+      <form
+        onSubmit={handleSignIn}
+        style={{ marginBottom: '10px' }}
+      >
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{
+            width: '100%',
+            padding: '8px',
+            marginBottom: '10px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+          }}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          style={{
+            width: '100%',
+            padding: '8px',
+            marginBottom: '10px',
+            border: '1px solid #ccc',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+          }}
+        />
+        <button
+          type="submit"
+          disabled={isLoading}
+          style={{
+            width: '100%',
+            padding: '10px',
+            backgroundColor: '#2563eb',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            marginBottom: '10px',
+          }}
+        >
+          Sign In
+        </button>
+      </form>
+
+      <button
+        onClick={handleSignUp}
+        disabled={isLoading}
+        style={{
+          width: '100%',
+          padding: '10px',
+          backgroundColor: '#16a34a',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          marginBottom: '10px',
+        }}
+      >
+        Sign Up
+      </button>
+
+      <button
+        onClick={handleSignInWithGoogle}
+        disabled={isLoading}
+        style={{
+          width: '100%',
+          padding: '10px',
+          backgroundColor: '#dc2626',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+      >
+        Sign in with Google
+      </button>
+    </div>
   );
 };
